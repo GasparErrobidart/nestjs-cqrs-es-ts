@@ -1,6 +1,6 @@
 import { ToDoAddedEvent } from './todo-added/ToDoAdded.event';
-import { ToDoCompletedEvent } from './todo-added/ToDoCompleted.event';
-import { ToDoRenamedEvent } from './todo-added/ToDoRenamed.event';
+import { ToDoCompletedEvent } from './todo-completed/ToDoCompleted.event';
+import { ToDoRenamedEvent } from './todo-renamed/ToDoRenamed.event';
 
 export const ToDoEvents = [
   ToDoAddedEvent,

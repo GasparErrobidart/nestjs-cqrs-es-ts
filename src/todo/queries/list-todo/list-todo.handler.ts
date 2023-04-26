@@ -8,7 +8,7 @@ export class ListTodoHandler implements IQueryHandler<ListTodoQuery> {
   constructor(private readonly todoRepository: ToDoRepository) {}
 
   async execute(): Promise<ListTodoResultDTO> {
-    const todos = this.todoRepository.findAll();
+    const todos = await this.todoRepository.findAll();
     return new ListTodoResultDTO(todos);
   }
 }

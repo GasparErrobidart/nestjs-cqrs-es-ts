@@ -1,73 +1,43 @@
-import { Injectable, PreconditionFailedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AnyFact, Fact } from './Fact';
+import EventEntityMapper from './EventEntityMapper';
+import { DynamoOrm } from './dynamodb/DynamoOrm';
 
-export interface IEvent {
-  type: string;
-  id: string;
-  version: number;
+export interface FindEventsRequest {
+  aggregateType: string;
+  aggregateId?: string;
+  version?: number;
 }
-
-const MOCK_DATA = {
-  'event-ToDo#1-v#0': {
-    type: 'todo-added',
-    title: 'This is a mock todo',
-    id: '1',
-    todoId: '1',
-    version: 0,
-    done: false,
-  },
-  'event-ToDo#2-v#0': {
-    type: 'todo-added',
-    title: 'This is another todo...',
-    id: '2',
-    todoId: '2',
-    version: 0,
-    done: false,
-  },
-};
 
 @Injectable()
 export class EventStore {
-  async put(aggregateType: string, events: IEvent[]) {
-    this.validateOptimisticLocking(aggregateType, events);
+  constructor(private dynamo: DynamoOrm) {}
+
+  private getClient() {
+    return this.dynamo.eventTableClient;
+  }
+
+  async find(request: FindEventsRequest) {
+    const response = await this.getClient().find(Fact, {
+      entityType: request.aggregateType,
+      entityId: request.aggregateId,
+      version: request.version,
+    });
+    return response?.items.map((event) =>
+      EventEntityMapper.fromEventType(event),
+    );
+  }
+
+  async append(events: AnyFact[]) {
     for (const event of events) {
-      const pk = this.createPartitionKey(aggregateType, event);
-      MOCK_DATA[pk] = event;
+      await this.getClient().create(event, {
+        /* 
+          IMPORTANT!!
+          We never ever ever ever want to overwrite existing events.
+          A new event means a new version number, we don't want to overwrite versions EVER!
+        */
+        overwriteIfExists: false,
+      });
     }
-    console.log({ EventStore: MOCK_DATA });
-  }
-
-  getEventsForAggregate(aggregateType: string, aggregateId: string) {
-    return this.getPartitionsBySuffix(
-      `event-${aggregateType}#${aggregateId}-v`,
-    );
-  }
-
-  getEventsForAllAggregate(aggregateType: string) {
-    return this.getPartitionsBySuffix(`event-${aggregateType}#`);
-  }
-
-  getPartitionsBySuffix(suffix: string) {
-    return Object.keys(MOCK_DATA)
-      .filter((pk) => {
-        const expression = new RegExp(`^${suffix}`);
-        return expression.test(pk);
-      })
-      .map((key) => MOCK_DATA[key]);
-  }
-
-  private validateOptimisticLocking(aggregateType: string, events: IEvent[]) {
-    const partitionKeys = events.map((ev) =>
-      this.createPartitionKey(aggregateType, ev),
-    );
-    for (const key of partitionKeys) {
-      if (MOCK_DATA.hasOwnProperty(key))
-        throw new PreconditionFailedException(
-          'Inconsistent event versioning detected.',
-        );
-    }
-  }
-
-  private createPartitionKey(aggregateType: string, { id, version }: IEvent) {
-    return `event-${aggregateType}#${id}-v#${version}`;
   }
 }

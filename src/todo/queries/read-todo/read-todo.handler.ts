@@ -9,7 +9,7 @@ export class ReadTodoHandler implements IQueryHandler<ReadTodoQuery> {
   constructor(private readonly todoRepository: ToDoRepository) {}
 
   async execute(query: ReadTodoQuery): Promise<ReadTodoResultDTO> {
-    const result = this.todoRepository.findById(query.todoId);
+    const result = await this.todoRepository.findById(query.todoId);
     if (!result) throw new NotFoundException();
     return new ReadTodoResultDTO(result);
   }

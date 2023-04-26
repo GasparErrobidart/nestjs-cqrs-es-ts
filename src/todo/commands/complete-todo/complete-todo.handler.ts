@@ -11,7 +11,7 @@ export class CompleteTodoHandler
 
   async execute(command: CompleteTodoCommand) {
     const { todoId } = command;
-    const todo = this.todoRepository.findById(todoId);
+    const todo = await this.todoRepository.findById(todoId);
     if (!todo) throw new NotFoundException();
     todo.complete();
     await this.todoRepository.persist(todo);

@@ -1,27 +1,26 @@
-import { IEvent } from 'src/framework/EventStore';
+import { DomainEvent } from 'src/framework/DomainEvent';
+import { Fact, FactProps } from 'src/framework/Fact';
+import { TODO_ENTITY_TYPE, ToDoEntityType } from 'src/todo/ToDo';
 
-export interface ToDoAddedEventProps {
+export interface ToDoAddedEventPayload {
   todoId: string;
   title: string;
   done: boolean;
-  version: number;
 }
 
-export class ToDoAddedEvent implements IEvent {
-  public readonly type: string = 'todo-added';
-  public readonly todoId: string;
-  public readonly title: string;
-  public readonly done: boolean;
-  public readonly version: number;
+export type ToDoAddeddEventType = 'todo-added';
+export const TO_DO_ADDED_EVENT_TYPE: ToDoAddeddEventType = 'todo-added';
 
-  constructor(props: ToDoAddedEventProps) {
-    this.todoId = props.todoId;
-    this.title = props.title;
-    this.done = props.done;
-    this.version = props.version;
-  }
+@DomainEvent({ type: TO_DO_ADDED_EVENT_TYPE })
+export class ToDoAddedEvent extends Fact<
+  ToDoEntityType,
+  ToDoAddeddEventType,
+  ToDoAddedEventPayload
+> {
+  readonly type = TO_DO_ADDED_EVENT_TYPE;
+  readonly entityType: ToDoEntityType = TODO_ENTITY_TYPE;
 
-  get id() {
-    return this.todoId;
+  constructor(props: FactProps<ToDoAddedEventPayload>) {
+    super(props, props.payload.todoId);
   }
 }

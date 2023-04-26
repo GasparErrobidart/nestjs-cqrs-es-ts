@@ -1,15 +1,27 @@
-import { BadRequestException } from '@nestjs/common';
-import { AggregateRoot } from '@nestjs/cqrs';
-import { ToDoAddedEvent } from './events/todo-added/ToDoAdded.event';
-import { IEvent } from 'src/framework/EventStore';
-import { ToDoRenamedEvent } from './events/todo-added/ToDoRenamed.event';
-import { ToDoCompletedEvent } from './events/todo-added/ToDoCompleted.event';
+import { BadRequestException, Type } from '@nestjs/common';
+import {
+  TO_DO_ADDED_EVENT_TYPE,
+  ToDoAddedEvent,
+} from './events/todo-added/ToDoAdded.event';
+import { Aggregate } from 'src/framework/Aggregate';
+import { AnyFact } from 'src/framework/Fact';
+import { IEventHandler } from '@nestjs/cqrs';
+import {
+  TO_DO_RENAMED_EVENT_TYPE,
+  ToDoRenamedEvent,
+} from './events/todo-renamed/ToDoRenamed.event';
+import {
+  TO_DO_COMPLETED_EVENT_TYPE,
+  ToDoCompletedEvent,
+} from './events/todo-completed/ToDoCompleted.event';
 
-export class ToDo extends AggregateRoot<IEvent> {
+export type ToDoEntityType = 'ToDo';
+export const TODO_ENTITY_TYPE: ToDoEntityType = 'ToDo';
+
+export class ToDo extends Aggregate {
   public id: string;
   public title: string;
   public done: boolean;
-  private _version = -1;
 
   constructor() {
     super();
@@ -21,55 +33,77 @@ export class ToDo extends AggregateRoot<IEvent> {
     const done = false;
     this.apply(
       new ToDoAddedEvent({
-        todoId: id,
-        title,
-        done,
-        version: ++this._version,
+        payload: {
+          todoId: id,
+          title,
+          done,
+        },
+        version: this.generateNextVersion(),
       }),
     );
   }
 
-  onToDoAddedEvent(event: ToDoAddedEvent) {
+  protected applyAddedEvent(event: ToDoAddedEvent) {
     this._version = event.version;
-    this.title = event.title;
-    this.done = event.done;
-    this.id = event.todoId;
+    this.title = event.payload.title;
+    this.done = event.payload.done;
+    this.id = event.payload.todoId;
   }
 
   rename(title: string) {
     this.validateTitle(title);
     this.apply(
       new ToDoRenamedEvent({
-        title,
-        todoId: this.id,
-        version: ++this._version,
+        payload: {
+          todoId: this.id,
+          title,
+        },
+        version: this.generateNextVersion(),
       }),
     );
   }
 
-  onToDoRenamedEvent(event: ToDoRenamedEvent) {
+  protected applyRenamedEvent(event: ToDoRenamedEvent) {
     this._version = event.version;
-    this.title = event.title;
+    this.title = event.payload.title;
   }
 
   complete() {
     this.apply(
       new ToDoCompletedEvent({
-        done: true,
-        todoId: this.id,
-        version: ++this._version,
+        payload: {
+          done: true,
+          todoId: this.id,
+        },
+        version: this.generateNextVersion(),
       }),
     );
   }
 
-  onToDoCompletedEvent(event: ToDoCompletedEvent) {
+  applyCompletedEvent(event: ToDoCompletedEvent) {
     this._version = event.version;
-    this.done = event.done;
+    this.done = event.payload.done;
   }
 
   validateTitle(title: string) {
     if (/banana/gi.test(title)) {
       throw new BadRequestException('Title can not include banana');
+    }
+  }
+
+  protected override getEventHandler(
+    event: AnyFact,
+  ): Type<IEventHandler> | undefined {
+    switch (event.type) {
+      case TO_DO_ADDED_EVENT_TYPE: {
+        return this.applyAddedEvent.bind(this);
+      }
+      case TO_DO_RENAMED_EVENT_TYPE: {
+        return this.applyRenamedEvent.bind(this);
+      }
+      case TO_DO_COMPLETED_EVENT_TYPE: {
+        return this.applyCompletedEvent.bind(this);
+      }
     }
   }
 }

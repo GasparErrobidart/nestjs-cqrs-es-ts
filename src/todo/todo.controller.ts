@@ -1,5 +1,4 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { TodoMockPersistenceService } from './todo-mock-persistance.service';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { AddTodoRequestDTO } from './dto/requests/add-todo.dto';
 import { AddTodoCommand } from './commands/add-todo/add-todo.command';
@@ -15,7 +14,6 @@ import { ReadTodoResultDTO } from './dto/query/read-todo-result';
 @Controller('todo')
 export class TodoController {
   constructor(
-    private readonly todoPersistence: TodoMockPersistenceService,
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
   ) {}

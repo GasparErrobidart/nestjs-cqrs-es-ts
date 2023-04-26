@@ -9,7 +9,7 @@ export class RenameTodoHandler implements ICommandHandler<RenameTodoCommand> {
 
   async execute(command: RenameTodoCommand) {
     const { todoId, newTitle } = command;
-    const todo = this.todoRepository.findById(todoId);
+    const todo = await this.todoRepository.findById(todoId);
     if (!todo) throw new NotFoundException();
     todo.rename(newTitle);
     await this.todoRepository.persist(todo);
